@@ -1,0 +1,6 @@
+{
+  "manifest_version": 3,
+  "name": "Touchless Control",
+  "version": "1.0",
+  "description": "Extension to surf the web using gestures and voice"
+}
