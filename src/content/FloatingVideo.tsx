@@ -1,8 +1,9 @@
 import {useRef, useState, useEffect} from "react";
-import {ObjectDetector, FilesetResolver, type ObjectDetectorResult} from "@mediapipe/tasks-vision";
-
+import {ObjectDetector, FilesetResolver, HandLandmarker} from "@mediapipe/tasks-vision";
+import {initHandDetector, drawHandSkeleton, getHandLandmarks} from "./gestureDetect.ts";
 
 let objectDetector: ObjectDetector;
+let handDetector: HandLandmarker;
 // let video = document.getElementById("video-player") as HTMLVideoElement;
 // let videoParent = document.getElementById("video-container") as HTMLDivElement;
 // let canvas = document.getElementById("over-video") as HTMLCanvasElement;
@@ -21,6 +22,7 @@ export const FloatingVideo = () => {
     const [error, setError] = useState<string | null>(null);
     const [isCameraOn, setIsCameraOn] = useState<boolean>(false);
     const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
+    const [isHandModelLoaded, setIsHandModelLoaded] = useState<boolean>(false);
 
     const initObjDetector = async () => {
         try {
@@ -51,6 +53,12 @@ export const FloatingVideo = () => {
 
     useEffect(() => {
         initObjDetector();
+        const handsWrapper = async() =>
+        {
+            const tempHands = await initHandDetector(setIsHandModelLoaded);
+            if(tempHands) handDetector = tempHands;
+        }
+        handsWrapper();
     }, []);
 
     useEffect(() => {
@@ -84,7 +92,7 @@ export const FloatingVideo = () => {
         };
 
 
-        if (isModelLoaded) {
+        if (isModelLoaded && isHandModelLoaded) {
             if (isCameraOn) {
                 startCamera();
             } else {
@@ -97,51 +105,82 @@ export const FloatingVideo = () => {
         };
     }, [isCameraOn]);
 
-    const detectObject = async () => {
-       let startTimeMs = performance.now();
-       if(videoRef.current?.currentTime !== lastVideoTime && videoRef.current?.currentTime && objectDetector) {
-           lastVideoTime = videoRef.current?.currentTime;
-           const detections = objectDetector.detectForVideo(videoRef.current, startTimeMs);
-           console.log('detections:', detections);
-           // call function and send detections to it
-           displayHighlightedDetections(detections);
-       }
-       window.requestAnimationFrame(detectObject);
-    }
+    // const detectObject = async () => {
+    //    let startTimeMs = performance.now();
+    //    if(videoRef.current?.currentTime !== lastVideoTime && videoRef.current?.currentTime && objectDetector) {
+    //        lastVideoTime = videoRef.current?.currentTime;
+    //        const detections = objectDetector.detectForVideo(videoRef.current, startTimeMs);
+    //        console.log('detections:', detections);
+    //        // call function and send detections to it
+    //        displayHighlightedDetections(detections);
+    //    }
+    //    window.requestAnimationFrame(detectObject);
+    // }
 
-    var children:any[] = [];
+    // const displayHighlightedDetections = (detections: ObjectDetectorResult, ctx: CanvasRenderingContext2D) => {
+    //     if (!detections.detections || detections.detections.length === 0) return;
+    //
+    //     ctx.save();
+    //     for (const detection of detections.detections) {
+    //
+    //         if (!detection.boundingBox) continue;
+    //
+    //         const { originX, originY, width, height } = detection.boundingBox;
+    //
+    //         ctx.beginPath();
+    //         ctx.lineWidth = 4;
+    //         ctx.strokeStyle = "#00FF00";
+    //         ctx.rect(originX, originY, width, height);
+    //         ctx.stroke();
+    //
+    //         ctx.fillStyle = "rgba(0, 255, 0, 0.1)";
+    //         ctx.fill();
+    //
+    //         if (detection.categories && detection.categories.length > 0) {
+    //             const label = `${detections.detections[0].categories[0].categoryName} ${Math.round(detections.detections[0].categories[0].score * 100)}%`;
+    //             ctx.save();
+    //             ctx.scale(-1, 1);
+    //             ctx.fillStyle = "#00FF00";
+    //             ctx.font = "16px Arial";
+    //             ctx.fillText(label, -originX-width, originY - 10);
+    //
+    //             ctx.restore();
+    //         }
+    //     }
+    //     ctx.restore();
+    // }
 
-    const displayHighlightedDetections = (detections: ObjectDetectorResult) => {
-        for (let child of children) {
-            videoContainerRef.current?.removeChild(child);
+    const processFrame = () => {
+        if (!videoRef.current || !canvasRef.current || !ctxRef.current || !objectDetector || !handDetector) {
+            window.requestAnimationFrame(processFrame);
+            return;
         }
-        children.splice(0);
-        if(canvasRef.current && ctxRef.current) {
-            // console.log('drawing DRAWING', detections.detections[0].boundingBox?.originX as number, detections.detections[0].boundingBox?.originY as number, detections.detections[0].boundingBox?.width as number, detections.detections[0].boundingBox?.height as number)
-            const ctx = ctxRef.current;
-            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-            ctx.fillStyle = "rgba(88, 231, 0, 0.5)";
-            ctx.fillRect(detections.detections[0].boundingBox?.originX as number, detections.detections[0].boundingBox?.originY as number, detections.detections[0].boundingBox?.width as number, detections.detections[0].boundingBox?.height as number)
-            // if(!(detections.detections[0].boundingBox)) return;
-            // const { originX, originY, width, height } = detections.detections[0].boundingBox;
 
-            // ctx.beginPath();
-            // ctx.lineWidth = 4;
-            // ctx.strokeStyle = "#00FF00";
-            // ctx.rect(originX, originY, width-10, height);
-            // ctx.stroke();
-            //
-            // ctx.fillStyle = "rgba(0, 255, 0, 0.1)";
-            // ctx.fill();
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        const ctx = ctxRef.current;
+        const startTimeMs = performance.now();
 
-            // if (detections.detections[0].categories[0]) {
-            //     const label = `${detections.detections[0].categories[0].categoryName} ${Math.round(detections.detections[0].categories[0].score * 100)}%`;
-            //     ctx.fillStyle = "#00FF00";
-            //     ctx.font = "20px Arial";
-            //     ctx.fillText(label, originX, originY - 10);
-            // }
+        ctx.save();
+
+        if (video.currentTime !== lastVideoTime) {
+            lastVideoTime = video.currentTime;
+
+           // const objectDetections = objectDetector.detectForVideo(video, startTimeMs);
+            const handDetections = getHandLandmarks(handDetector, video, startTimeMs);
+            console.log('detections hand are:', handDetections);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          // displayHighlightedDetections(objectDetections, ctx);
+
+            if (handDetections) {
+                console.log('trying to draw here');
+                drawHandSkeleton(handDetections, ctx);
+            }
         }
+        ctx.restore();
 
+        window.requestAnimationFrame(processFrame);
     }
 
     return (
@@ -164,17 +203,17 @@ export const FloatingVideo = () => {
                         playsInline
                         muted
                         id="video-player"
-                        className="w-full h-auto block"
+                        className="w-full h-auto block -scale-x-100"
                         onLoadedData={() => {
                             if (canvasRef.current && videoRef.current) {
                                 canvasRef.current.width = videoRef.current.videoWidth;
                                 canvasRef.current.height = videoRef.current.videoHeight;
                             }
-                            console.log('start detection');
-                            detectObject();
+                            console.log('start detections');
+                            processFrame();
                         }}
                     />
-                        <canvas id="over-video" ref={canvasRef} className="absolute top-0 left-0 pointer-events-none flex items-center justify-center text-white font-bold bg-black/20"/>
+                        <canvas id="over-video" ref={canvasRef} className="absolute -scale-x-100 top-0 left-0 w-full h-full pointer-events-none"/>
                     </div>) : null
 
             )}

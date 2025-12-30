@@ -6,5 +6,12 @@
   "action" : {
     "default_popup": "index.html",
     "default_icon": "touchless-logo.png"
+  },
+  "permissions": [
+    "camera",
+    "microphone"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' https://cdn.jsdelivr.net; object-src 'self'"
   }
 }
