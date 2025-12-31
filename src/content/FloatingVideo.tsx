@@ -26,7 +26,6 @@ export const FloatingVideo = () => {
 
     const initObjDetector = async () => {
         try {
-            console.log('trying to init');
             const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm");
             objectDetector = await ObjectDetector.createFromOptions(vision, {
                 baseOptions: {
@@ -168,13 +167,11 @@ export const FloatingVideo = () => {
 
            // const objectDetections = objectDetector.detectForVideo(video, startTimeMs);
             const handDetections = getHandLandmarks(handDetector, video, startTimeMs);
-            console.log('detections hand are:', handDetections);
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
           // displayHighlightedDetections(objectDetections, ctx);
 
             if (handDetections) {
-                console.log('trying to draw here');
                 drawHandSkeleton(handDetections, ctx);
             }
         }
@@ -209,7 +206,6 @@ export const FloatingVideo = () => {
                                 canvasRef.current.width = videoRef.current.videoWidth;
                                 canvasRef.current.height = videoRef.current.videoHeight;
                             }
-                            console.log('start detections');
                             processFrame();
                         }}
                     />

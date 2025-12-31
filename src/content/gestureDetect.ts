@@ -1,6 +1,7 @@
 import {FilesetResolver, HandLandmarker, type HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { HAND_CONNECTIONS } from "@mediapipe/hands";
 import React from "react";
+import {isFingerDown} from "./gestures/helpers.ts";
 
 
 export const initHandDetector = async (setIsHandModelLoaded: React.Dispatch<React.SetStateAction<boolean>>) => {
@@ -31,7 +32,9 @@ export const getHandLandmarks = (handDetector: HandLandmarker, videoRef: HTMLVid
 
 export const drawHandSkeleton = (landmarksDetection: HandLandmarkerResult, ctx: CanvasRenderingContext2D) => {
     if (!landmarksDetection.landmarks?.length) return;
-
+    console.log('landmarks:', landmarksDetection.landmarks);
+    const arr = landmarksDetection.landmarks[0];
+    if(isFingerDown(arr, 1)) console.log('Finger is down now');
     const { width, height } = ctx.canvas;
 
     ctx.save();
