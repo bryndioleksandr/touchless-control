@@ -34,8 +34,7 @@ export const getHandLandmarks = (handDetector: HandLandmarker, videoRef: HTMLVid
 export const drawHandSkeleton = (landmarksDetection: HandLandmarkerResult, ctx: CanvasRenderingContext2D) => {
     if (!landmarksDetection.landmarks?.length) return;
     // console.log('landmarks:', landmarksDetection.landmarks);
-    const arr = landmarksDetection.landmarks[0];
-
+    // console.log('world landmarks:', landmarksDetection.worldLandmarks);
     const gesture = recognizeGesture(landmarksDetection);
     if(gesture !== "IDLE") console.log('current gesture is', gesture);
     const { width, height } = ctx.canvas;

@@ -1,6 +1,10 @@
 import {useRef, useState, useEffect} from "react";
 import {ObjectDetector, FilesetResolver, HandLandmarker} from "@mediapipe/tasks-vision";
 import {initHandDetector, drawHandSkeleton, getHandLandmarks} from "./gestureDetect.ts";
+import {coordsForMovement} from "./gestures/events/cursorHelper.ts";
+import VirtualCursor from "./gestures/components/VirtualCursor.tsx";
+import {recognizeGesture} from "./gestures/gestureRecognizer.ts";
+import {handleEvents} from "./gestures/gestureHandler.ts";
 
 let objectDetector: ObjectDetector;
 let handDetector: HandLandmarker;
@@ -18,6 +22,7 @@ export const FloatingVideo = () => {
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
     const videoContainerRef = useRef<HTMLDivElement>(null);
 
+    const cursorRef = useRef<HTMLDivElement>(null);
 
     const [error, setError] = useState<string | null>(null);
     const [isCameraOn, setIsCameraOn] = useState<boolean>(false);
@@ -173,6 +178,16 @@ export const FloatingVideo = () => {
 
             if (handDetections) {
                 drawHandSkeleton(handDetections, ctx);
+                const coords = coordsForMovement(handDetections.landmarks[0], window.innerWidth, window.innerHeight);
+                //const gesture = recognizeGesture(handDetections);
+
+                // if(cursorRef.current) {
+                //   handleEvents(gesture, handDetections, cursorRef.current);
+                // }
+
+                if(cursorRef.current && coords) {
+                    cursorRef.current.style.transform = `translate(${coords.x}px,${coords.y}px)`;
+                }
             }
         }
         ctx.restore();
@@ -210,6 +225,7 @@ export const FloatingVideo = () => {
                         }}
                     />
                         <canvas id="over-video" ref={canvasRef} className="absolute -scale-x-100 top-0 left-0 w-full h-full pointer-events-none"/>
+                        <VirtualCursor ref={cursorRef}/>
                     </div>) : null
 
             )}
