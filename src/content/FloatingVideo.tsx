@@ -178,16 +178,16 @@ export const FloatingVideo = () => {
 
             if (handDetections) {
                 drawHandSkeleton(handDetections, ctx);
-                const coords = coordsForMovement(handDetections.landmarks[0], window.innerWidth, window.innerHeight);
-                //const gesture = recognizeGesture(handDetections);
+                // const coords = coordsForMovement(handDetections.landmarks[0], window.innerWidth, window.innerHeight);
+                const gesture = recognizeGesture(handDetections);
 
-                // if(cursorRef.current) {
-                //   handleEvents(gesture, handDetections, cursorRef.current);
-                // }
-
-                if(cursorRef.current && coords) {
-                    cursorRef.current.style.transform = `translate(${coords.x}px,${coords.y}px)`;
+                if(cursorRef.current) {
+                  handleEvents(gesture, handDetections, cursorRef.current);
                 }
+
+                // if(cursorRef.current && coords) {
+                //     cursorRef.current.style.transform = `translate(${coords.x}px,${coords.y}px)`;
+                // }
             }
         }
         ctx.restore();

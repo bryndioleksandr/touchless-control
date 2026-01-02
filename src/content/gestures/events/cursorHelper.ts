@@ -36,3 +36,4 @@ export const coordsForMovement = (landmarkDetections: NormalizedLandmark[], scre
     prevY = smoothY;
     return {x: smoothX, y: smoothY};
 }
+

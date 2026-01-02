@@ -1,7 +1,6 @@
 import {FilesetResolver, HandLandmarker, type HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { HAND_CONNECTIONS } from "@mediapipe/hands";
 import React from "react";
-import {isFingerDown} from "./gestures/helpers.ts";
 import {recognizeGesture} from "./gestures/gestureRecognizer.ts";
 
 
@@ -33,7 +32,7 @@ export const getHandLandmarks = (handDetector: HandLandmarker, videoRef: HTMLVid
 
 export const drawHandSkeleton = (landmarksDetection: HandLandmarkerResult, ctx: CanvasRenderingContext2D) => {
     if (!landmarksDetection.landmarks?.length) return;
-    // console.log('landmarks:', landmarksDetection.landmarks);
+    console.log('landmarks:', landmarksDetection);
     // console.log('world landmarks:', landmarksDetection.worldLandmarks);
     const gesture = recognizeGesture(landmarksDetection);
     if(gesture !== "IDLE") console.log('current gesture is', gesture);
