@@ -1,8 +1,7 @@
 import {useRef, useState, useEffect} from "react";
 import {ObjectDetector, FilesetResolver, HandLandmarker} from "@mediapipe/tasks-vision";
 import {initHandDetector, drawHandSkeleton, getHandLandmarks} from "./gestureDetect.ts";
-import {coordsForMovement} from "./gestures/events/cursorHelper.ts";
-import VirtualCursor from "./gestures/components/VirtualCursor.tsx";
+    import VirtualCursor from "./gestures/components/VirtualCursor.tsx";
 import {recognizeGesture} from "./gestures/gestureRecognizer.ts";
 import {handleEvents} from "./gestures/gestureHandler.ts";
 
@@ -31,7 +30,7 @@ export const FloatingVideo = () => {
 
     const initObjDetector = async () => {
         try {
-            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.2/wasm");
+            const vision = await FilesetResolver.forVisionTasks("./wasm");
             objectDetector = await ObjectDetector.createFromOptions(vision, {
                 baseOptions: {
                     modelAssetPath: `https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite`,

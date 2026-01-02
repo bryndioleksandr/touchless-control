@@ -3,7 +3,7 @@
   "name": "Touchless Control",
   "version": "1.0",
   "description": "Extension to surf the web using gestures and voice",
-  "action" : {
+  "action": {
     "default_popup": "index.html",
     "default_icon": "touchless-logo.png"
   },
@@ -12,6 +12,6 @@
     "microphone"
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' https://cdn.jsdelivr.net; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'self'"
   }
 }

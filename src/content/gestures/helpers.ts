@@ -1,4 +1,3 @@
-import type {HandLandmarkerResult, NormalizedLandmark} from "@mediapipe/tasks-vision";
 import type {Landmark} from "@mediapipe/hands";
 
 // starting from big finger
@@ -14,10 +13,9 @@ export const getDistance3D = (p1:{x:number, y:number, z:number}, p2:{x:number, y
     return Math.hypot(p1.x - p2.x, p1.y - p2.y, p1.z - p2.z);
 }
 
-export const isFingerDown = (landmarkDetections:  NormalizedLandmark[], worldLandmarkDetections: Landmark[], fingerIndex:number) => {
+export const isFingerDown = (worldLandmarkDetections: Landmark[], fingerIndex:number) => {
     // palm length
     const palmLength = getDistance3D({x: worldLandmarkDetections[9].x, y: worldLandmarkDetections[9].y, z: worldLandmarkDetections[9].z }, {x: worldLandmarkDetections[0].x, y: worldLandmarkDetections[0].y, z: worldLandmarkDetections[0].z });
-    const palmWidth = getDistance3D({x: worldLandmarkDetections[5].x, y: worldLandmarkDetections[5].y, z: worldLandmarkDetections[5].z }, {x: worldLandmarkDetections[17].x, y: worldLandmarkDetections[17].y, z: worldLandmarkDetections[17].z });
     const wrist = worldLandmarkDetections[0];
     const tip = worldLandmarkDetections[FINGER_TIPS[fingerIndex]];
     const pip = worldLandmarkDetections[FINGER_PIPS[fingerIndex]];
@@ -25,7 +23,6 @@ export const isFingerDown = (landmarkDetections:  NormalizedLandmark[], worldLan
     if (fingerIndex === 0) {
         const pinkyMCP = worldLandmarkDetections[17];
         const distanceToPinky = getDistance3D(tip, pinkyMCP);
-        const distanceToWrist = getDistance3D(tip, wrist);
 
         return distanceToPinky < (palmLength * 0.7);
     }

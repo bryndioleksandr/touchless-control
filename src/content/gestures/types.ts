@@ -1,3 +1,4 @@
+// @ts-ignore
 export enum GestureType {
     IDLE = "IDLE",
     POINTING = "POINTING",

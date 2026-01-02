@@ -1,7 +1,6 @@
 import type {GestureType} from "./types.ts";
 import type {HandLandmarkerResult} from "@mediapipe/tasks-vision";
 import {coordsForMovement} from "./events/cursorHelper.ts";
-import {getDistance2D} from "./helpers.ts";
 
 export const handleEvents = (gestureType: GestureType, landmarksDetection: HandLandmarkerResult, cursorRef: HTMLDivElement) => {
     const coords = coordsForMovement(landmarksDetection.landmarks[0], window.innerWidth, window.innerHeight);
