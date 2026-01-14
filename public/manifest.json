@@ -4,12 +4,28 @@
   "version": "1.0",
   "description": "Extension to surf the web using gestures and voice",
   "action": {
-    "default_popup": "index.html",
+    "default_popup": "popup.html",
     "default_icon": "touchless-logo.png"
   },
   "permissions": [
     "camera",
-    "microphone"
+    "microphone",
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "js": ["assets/content.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "index.html",
+        "assets/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'self'"
