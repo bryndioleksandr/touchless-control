@@ -8,10 +8,12 @@
     "default_icon": "touchless-logo.png"
   },
   "permissions": [
-    "camera",
-    "microphone",
+    "offscreen",
     "storage"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "js": ["assets/content.js"],

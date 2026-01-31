@@ -52,3 +52,13 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
         updateOverlayState(newValue);
     }
 });
+
+// chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+//     if (request.action === "TOGGLE_OVERLAY") {
+//         const existingIframe = document.getElementById('touchless-overlay-frame');
+//         const newState = !existingIframe;
+//
+//         updateOverlayState(newState);
+//
+//     }
+// });
