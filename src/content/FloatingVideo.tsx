@@ -1,234 +1,192 @@
-import {useRef, useState, useEffect} from "react";
-import {ObjectDetector, FilesetResolver, HandLandmarker} from "@mediapipe/tasks-vision";
-import {initHandDetector, drawHandSkeleton, getHandLandmarks} from "./gestureDetect.ts";
-    import VirtualCursor from "./gestures/components/VirtualCursor.tsx";
+import {useEffect, useRef, useState} from "react";
+import type {HandLandmarker} from "@mediapipe/tasks-vision";
+import {drawHandSkeleton, getHandLandmarks, initHandDetector} from "./gestureDetect.ts";
 import {recognizeGesture} from "./gestures/gestureRecognizer.ts";
 import {handleEvents} from "./gestures/gestureHandler.ts";
 
-let objectDetector: ObjectDetector;
-let handDetector: HandLandmarker;
-// let video = document.getElementById("video-player") as HTMLVideoElement;
-// let videoParent = document.getElementById("video-container") as HTMLDivElement;
-// let canvas = document.getElementById("over-video") as HTMLCanvasElement;
-// const canvaCtx = canvas.getContext("2d");
+let handDetector: HandLandmarker | null = null;
 let lastVideoTime = -1;
-
 
 export const FloatingVideo = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-    const videoContainerRef = useRef<HTMLDivElement>(null);
-
-    const cursorRef = useRef<HTMLDivElement>(null);
+    const runningRef = useRef(false);
+    const loopingRef = useRef(false);
+    const aliveRef = useRef(true);
 
     const [error, setError] = useState<string | null>(null);
-    const [isCameraOn, setIsCameraOn] = useState<boolean>(false);
-    const [isModelLoaded, setIsModelLoaded] = useState<boolean>(false);
-    const [isHandModelLoaded, setIsHandModelLoaded] = useState<boolean>(false);
+    const [isCameraOn, setIsCameraOn] = useState(false);
+    const [isHandModelLoaded, setIsHandModelLoaded] = useState(false);
+    const [cursorReady, setCursorReady] = useState<boolean | null>(null);
 
-    const initObjDetector = async () => {
-        try {
-            const vision = await FilesetResolver.forVisionTasks("./wasm");
-            objectDetector = await ObjectDetector.createFromOptions(vision, {
-                baseOptions: {
-                    modelAssetPath: `https://storage.googleapis.com/mediapipe-models/object_detector/efficientdet_lite0/float16/1/efficientdet_lite0.tflite`,
-                    delegate: "GPU"
-                },
-                scoreThreshold: 0.5,
-                runningMode: "VIDEO"
-            });
-            setIsModelLoaded(true);
-        } catch (e) {
-            console.error("error is:", e);
-        }
-    }
+    const stopCamera = () => {
+        runningRef.current = false;
+        loopingRef.current = false;
+        streamRef.current?.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+        if (videoRef.current) videoRef.current.srcObject = null;
+        setIsCameraOn(false);
+    };
 
-    useEffect(() => {
-        if (!canvasRef.current) return;
-
-        const ctx = canvasRef.current.getContext("2d");
-        if (!ctx) return;
-
-        ctxRef.current = ctx;
-    }, [canvasRef, isCameraOn]);
-
-    useEffect(() => {
-        initObjDetector();
-        const handsWrapper = async() =>
-        {
-            const tempHands = await initHandDetector(setIsHandModelLoaded);
-            if(tempHands) handDetector = tempHands;
-        }
-        handsWrapper();
-    }, []);
-
-    useEffect(() => {
-        const startCamera = async () => {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: true,
-                    audio: false,
-                });
-
-                streamRef.current = stream;
-
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                }
-            } catch (e) {
-                console.error(e);
-                setError("Camera permission denied");
-            }
-        };
-
-        const stopCamera = () => {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = null;
-            }
-        };
-
-
-        if (isModelLoaded && isHandModelLoaded) {
-            if (isCameraOn) {
-                startCamera();
-            } else {
-                stopCamera();
-            }
-        }
-
-        return () => {
-            stopCamera();
-        };
-    }, [isCameraOn]);
-
-    // const detectObject = async () => {
-    //    let startTimeMs = performance.now();
-    //    if(videoRef.current?.currentTime !== lastVideoTime && videoRef.current?.currentTime && objectDetector) {
-    //        lastVideoTime = videoRef.current?.currentTime;
-    //        const detections = objectDetector.detectForVideo(videoRef.current, startTimeMs);
-    //        console.log('detections:', detections);
-    //        // call function and send detections to it
-    //        displayHighlightedDetections(detections);
-    //    }
-    //    window.requestAnimationFrame(detectObject);
-    // }
-
-    // const displayHighlightedDetections = (detections: ObjectDetectorResult, ctx: CanvasRenderingContext2D) => {
-    //     if (!detections.detections || detections.detections.length === 0) return;
-    //
-    //     ctx.save();
-    //     for (const detection of detections.detections) {
-    //
-    //         if (!detection.boundingBox) continue;
-    //
-    //         const { originX, originY, width, height } = detection.boundingBox;
-    //
-    //         ctx.beginPath();
-    //         ctx.lineWidth = 4;
-    //         ctx.strokeStyle = "#00FF00";
-    //         ctx.rect(originX, originY, width, height);
-    //         ctx.stroke();
-    //
-    //         ctx.fillStyle = "rgba(0, 255, 0, 0.1)";
-    //         ctx.fill();
-    //
-    //         if (detection.categories && detection.categories.length > 0) {
-    //             const label = `${detections.detections[0].categories[0].categoryName} ${Math.round(detections.detections[0].categories[0].score * 100)}%`;
-    //             ctx.save();
-    //             ctx.scale(-1, 1);
-    //             ctx.fillStyle = "#00FF00";
-    //             ctx.font = "16px Arial";
-    //             ctx.fillText(label, -originX-width, originY - 10);
-    //
-    //             ctx.restore();
-    //         }
-    //     }
-    //     ctx.restore();
-    // }
-
-    const processFrame = () => {
-        if (!videoRef.current || !canvasRef.current || !ctxRef.current || !objectDetector || !handDetector) {
-            window.requestAnimationFrame(processFrame);
+    const startCamera = async () => {
+        setError(null);
+        if (streamRef.current) {
+            setIsCameraOn(true);
             return;
         }
 
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const ctx = ctxRef.current;
-        const startTimeMs = performance.now();
-
-        ctx.save();
-
-        if (video.currentTime !== lastVideoTime) {
-            lastVideoTime = video.currentTime;
-
-           // const objectDetections = objectDetector.detectForVideo(video, startTimeMs);
-            const handDetections = getHandLandmarks(handDetector, video, startTimeMs);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          // displayHighlightedDetections(objectDetections, ctx);
-
-            if (handDetections) {
-                drawHandSkeleton(handDetections, ctx);
-                // const coords = coordsForMovement(handDetections.landmarks[0], window.innerWidth, window.innerHeight);
-                const gesture = recognizeGesture(handDetections);
-
-                if(cursorRef.current) {
-                  handleEvents(gesture, handDetections, cursorRef.current);
-                }
-
-                // if(cursorRef.current && coords) {
-                //     cursorRef.current.style.transform = `translate(${coords.x}px,${coords.y}px)`;
-                // }
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: false,
+            });
+            if (!aliveRef.current) {
+                stream.getTracks().forEach((track) => track.stop());
+                return;
             }
+            streamRef.current = stream;
+            setIsCameraOn(true);
+        } catch (e) {
+            console.error(e);
+            setError("Дозволь доступ до камери в цьому вікні");
         }
-        ctx.restore();
+    };
 
-        window.requestAnimationFrame(processFrame);
-    }
+    const startLoop = () => {
+        if (loopingRef.current) return;
+        loopingRef.current = true;
+        runningRef.current = true;
+
+        const loop = () => {
+            if (!runningRef.current) {
+                loopingRef.current = false;
+                return;
+            }
+
+            const video = videoRef.current;
+            const canvas = canvasRef.current;
+            const ctx = ctxRef.current;
+
+            try {
+                if (video && canvas && ctx && handDetector && video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+                    lastVideoTime = video.currentTime;
+                    const startTimeMs = performance.now();
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    const handDetections = getHandLandmarks(handDetector, video, startTimeMs);
+
+                    if (handDetections?.landmarks?.length) {
+                        drawHandSkeleton(handDetections, ctx);
+                        handleEvents(recognizeGesture(handDetections), handDetections);
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+
+            window.requestAnimationFrame(loop);
+        };
+
+        window.requestAnimationFrame(loop);
+    };
+
+    useEffect(() => {
+        aliveRef.current = true;
+        let cancelled = false;
+
+        initHandDetector(setIsHandModelLoaded).then((detector) => {
+            if (cancelled) return;
+            if (detector) {
+                handDetector = detector;
+            } else {
+                setError("Не вдалося завантажити модель руки");
+            }
+        });
+
+        navigator.permissions?.query({name: "camera" as PermissionName}).then((status) => {
+            if (!cancelled && status.state === "granted") startCamera();
+        }).catch(() => undefined);
+
+        return () => {
+            cancelled = true;
+            aliveRef.current = false;
+            runningRef.current = false;
+            loopingRef.current = false;
+            streamRef.current?.getTracks().forEach((track) => track.stop());
+            streamRef.current = null;
+        };
+        // Camera is started from this mount and from the button click.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (typeof chrome === "undefined" || !chrome.storage?.session) return;
+
+        chrome.storage.session.get("cursorReady", (stored) => {
+            if (typeof stored.cursorReady === "boolean") setCursorReady(stored.cursorReady);
+        });
+
+        const onChange = (changes: {[key: string]: chrome.storage.StorageChange}, area: string) => {
+            if (area === "session" && changes.cursorReady) {
+                setCursorReady(changes.cursorReady.newValue === true);
+            }
+        };
+        chrome.storage.onChanged.addListener(onChange);
+        return () => chrome.storage.onChanged.removeListener(onChange);
+    }, []);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!isCameraOn || !video || !streamRef.current) return;
+        if (video.srcObject !== streamRef.current) {
+            video.srcObject = streamRef.current;
+        }
+    }, [isCameraOn]);
 
     return (
-        <div id="video-container" ref={videoContainerRef} className="video-container relative flex flex-col justify-center text-center">
-            <h2>Камера</h2>
-            <button onClick={() => {
-                setIsCameraOn(!isCameraOn)
-            }}>
-                {isCameraOn ? "Turn the camera off" : "Turn the camera on"}
+        <div className="relative flex w-full flex-col items-center text-center">
+            <h2 className="m-0 text-lg">Камера</h2>
+            <p className="my-2 text-sm leading-snug">
+                Вказівний палець рухає курсор на сайті. Щипок великим і вказівним другої руки — клік.
+                {!isHandModelLoaded ? " Модель руки ще вантажиться." : ""}
+            </p>
+            <button onClick={() => (isCameraOn ? stopCamera() : startCamera())}>
+                {isCameraOn ? "Вимкнути камеру" : "Дозволити камеру"}
             </button>
-            {error ? (
-                <p className="text-red-500">{error}</p>
-            ) : (
-
-                isCameraOn ? (
-                    <div className="video-container relative w-full max-w-[600px] rounded-[10px] overflow-hidden border border-black mx-auto">
+            {error ? <p className="text-red-500">{error}</p> : null}
+            {cursorReady === false ? (
+                <p className="my-2 text-sm leading-snug text-amber-400">
+                    Зараз відкрита нова вкладка Chrome, курсор туди не ставиться. Натисни YouTube або введи адресу — червона точка з’явиться на сайті.
+                </p>
+            ) : null}
+            {isCameraOn ? (
+                <div className="relative mx-auto mt-3 w-full overflow-hidden rounded-[10px] border border-black">
                     <video
                         ref={videoRef}
                         autoPlay
                         playsInline
                         muted
                         id="video-player"
-                        className="w-full h-auto block -scale-x-100"
+                        className="block h-auto w-full -scale-x-100"
                         onLoadedData={() => {
-                            if (canvasRef.current && videoRef.current) {
-                                canvasRef.current.width = videoRef.current.videoWidth;
-                                canvasRef.current.height = videoRef.current.videoHeight;
+                            const video = videoRef.current;
+                            const canvas = canvasRef.current;
+                            if (video && canvas) {
+                                canvas.width = video.videoWidth;
+                                canvas.height = video.videoHeight;
+                                ctxRef.current = canvas.getContext("2d");
                             }
-                            processFrame();
+                            startLoop();
                         }}
                     />
-                        <canvas id="over-video" ref={canvasRef} className="absolute -scale-x-100 top-0 left-0 w-full h-full pointer-events-none"/>
-                        <VirtualCursor ref={cursorRef}/>
-                    </div>) : null
-
-            )}
+                    <canvas
+                        id="over-video"
+                        ref={canvasRef}
+                        className="pointer-events-none absolute top-0 left-0 h-full w-full -scale-x-100"
+                    />
+                </div>
+            ) : null}
         </div>
-    )
-        ;
-}
+    );
+};

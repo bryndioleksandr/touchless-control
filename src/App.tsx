@@ -1,23 +1,29 @@
-import './App.css'
-// import {FloatingVideo} from "./content/FloatingVideo.tsx";
-import {useState} from "react";
+import {useEffect} from "react";
 import {FloatingVideo} from "./content/FloatingVideo.tsx";
 
-
 function App() {
-const [counter, setCounter] = useState<number>(0);
+    useEffect(() => {
+        if (typeof chrome === "undefined" || !chrome.windows?.getCurrent || !chrome.storage?.session) return;
 
-  return (
-    <>
-        <div>
-            <h1 className="text-3xl font-bold underline border-2 border-dashed p-10 m-20">Touchless Control App</h1>
+        chrome.windows.getCurrent((win) => {
+            if (win.id != null) {
+                chrome.storage.session.set({cameraWindowId: win.id});
+            }
+        });
+
+        const onHide = (event: PageTransitionEvent) => {
+            if (event.persisted) return;
+            chrome.storage.local.set({cameraEnabled: false});
+        };
+        window.addEventListener("pagehide", onHide);
+        return () => window.removeEventListener("pagehide", onHide);
+    }, []);
+
+    return (
+        <div className="w-full px-3 py-3">
             <FloatingVideo/>
-
-            <button className="border-red text-center border-2 p-5 mt-10" onClick={() => setCounter(counter + 1)}>Click
-                me + {counter}</button>
         </div>
-    </>
-  )
+    );
 }
 
-export default App
+export default App;

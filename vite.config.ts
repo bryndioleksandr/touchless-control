@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
+import { cpSync } from 'node:fs'
 import { resolve } from 'path'
 
 // https://vite.dev/config/
@@ -8,6 +9,17 @@ export default defineConfig({
   plugins: [
       react(),
       tailwindcss(),
+      {
+          name: 'copy-mediapipe-wasm',
+          apply: 'build',
+          closeBundle() {
+              cpSync(
+                  resolve(__dirname, 'node_modules/@mediapipe/tasks-vision/wasm'),
+                  resolve(__dirname, 'dist/wasm'),
+                  { recursive: true },
+              )
+          },
+      },
   ],
     build: {
         rollupOptions: {

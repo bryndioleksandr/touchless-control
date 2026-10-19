@@ -3,7 +3,7 @@ import {GestureType} from "./types.ts";
 import {getDistance2D, isFingerDown} from "./helpers.ts";
 
 export const recognizeGesture = (landmarksDetection: HandLandmarkerResult): GestureType => {
-    if (!landmarksDetection.landmarks || landmarksDetection.landmarks.length === 0) return GestureType.IDLE;
+    if (!landmarksDetection.landmarks?.length || !landmarksDetection.worldLandmarks?.[0]) return GestureType.IDLE;
     // landmarksDetection.landmarks[0] === first hand (can be 2 there)
     const fingerState = [0, 1, 2, 3, 4].map(index => isFingerDown(landmarksDetection.worldLandmarks[0], index));
 

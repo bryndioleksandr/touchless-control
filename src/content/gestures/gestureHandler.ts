@@ -1,31 +1,31 @@
-import type {GestureType} from "./types.ts";
 import type {HandLandmarkerResult} from "@mediapipe/tasks-vision";
 import {coordsForMovement} from "./events/cursorHelper.ts";
+import {GestureType} from "./types.ts";
 
-export const handleEvents = (gestureType: GestureType, landmarksDetection: HandLandmarkerResult, cursorRef: HTMLDivElement) => {
-    const coords = coordsForMovement(landmarksDetection.landmarks[0], window.innerWidth, window.innerHeight);
-    if (coords) {
-        console.log('coords are here');
-        cursorRef.style.transform = `translate(${coords.x}px,${coords.y}px)`;
+let lastSent = 0;
 
-        switch (gestureType) {
-            case "POINTING":
+export const handleEvents = (gestureType: GestureType, landmarksDetection: HandLandmarkerResult, cursorRef?: HTMLDivElement | null) => {
+    const hand = landmarksDetection.landmarks[0];
+    if (!hand) return;
 
-                break;
-            case "CLICK":
-                console.log('Clicking at:', coords.x, coords.y);
+    const coords = coordsForMovement(hand);
+    if (!coords) return;
 
-                cursorRef.style.background = "blue";
-                const elementUnderCursor = document.elementFromPoint(coords.x, coords.y);
-
-                if (elementUnderCursor) {
-                    if (elementUnderCursor instanceof HTMLElement) {
-                        elementUnderCursor.click();
-                        elementUnderCursor.focus();
-                        cursorRef.style.background = "ff4d4d";
-                    }
-                    break;
-                }
-        }
+    if (cursorRef) {
+        cursorRef.style.transform = `translate(${coords.nx * window.innerWidth}px, ${coords.ny * window.innerHeight}px)`;
+        cursorRef.style.background = gestureType === GestureType.CLICK ? "#3b82f6" : "#ff4d4d";
     }
-}
+
+    const now = performance.now();
+    if (gestureType !== GestureType.CLICK && now - lastSent < 32) return;
+    lastSent = now;
+
+    if (typeof chrome === "undefined" || !chrome.runtime?.sendMessage) return;
+
+    chrome.runtime.sendMessage({
+        type: "GESTURE",
+        nx: coords.nx,
+        ny: coords.ny,
+        gesture: gestureType,
+    }).catch(() => {});
+};

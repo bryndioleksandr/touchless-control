@@ -1,64 +1,81 @@
-// src/content/scripts/content.js
+if (globalThis.__touchlessControl) {
+    // Already injected into this tab.
+} else {
+    globalThis.__touchlessControl = true;
 
-// Функція, яка чітко знає: показати чи сховати
-function updateOverlayState(shouldBeEnabled) {
-    const existingIframe = document.getElementById('touchless-overlay-frame');
+    let cursorEl = null;
+    let previousGesture = "IDLE";
+    let lastClickAt = 0;
 
-    if (shouldBeEnabled) {
-        if (!existingIframe) {
-            console.log('enable content script');
-            createOverlay();
-        }
-    } else {
-        if (existingIframe) {
-            console.log('disable content script');
-            existingIframe.remove();
-        }
+    function ensureCursor() {
+        if (cursorEl?.isConnected) return cursorEl;
+
+        const host = document.createElement("div");
+        host.id = "touchless-cursor-host";
+        host.style.cssText = "all:initial;position:fixed;inset:0;z-index:2147483647;pointer-events:none;";
+
+        const shadow = host.attachShadow({ mode: "open" });
+        const cursor = document.createElement("div");
+        cursor.style.cssText = [
+            "position:fixed",
+            "top:0",
+            "left:0",
+            "width:18px",
+            "height:18px",
+            "border-radius:50%",
+            "background:#ff4d4d",
+            "box-shadow:0 0 0 2px #fff, 0 0 12px rgba(0,0,0,.45)",
+            "transform:translate(-100px,-100px)",
+        ].join(";");
+        shadow.appendChild(cursor);
+        (document.documentElement || document.body).appendChild(host);
+        cursorEl = cursor;
+        return cursorEl;
     }
-}
 
-function createOverlay() {
-    const iframe = document.createElement('iframe');
-    iframe.id = 'touchless-overlay-frame';
-    iframe.src = chrome.runtime.getURL('index.html');
-    iframe.allow = "camera; microphone";
+    function removeCursor() {
+        document.getElementById("touchless-cursor-host")?.remove();
+        cursorEl = null;
+        previousGesture = "IDLE";
+    }
 
-    Object.assign(iframe.style, {
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        width: '350px',
-        height: '250px',
-        border: 'none',
-        zIndex: '2147483647',
-        borderRadius: '12px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-        background: 'transparent'
+    function clickAt(x, y) {
+        const target = document.elementFromPoint(x, y);
+        if (!target || typeof target.click !== "function") return;
+        target.click();
+        if (target instanceof HTMLElement) target.focus();
+    }
+
+    function onGesture(message) {
+        if (typeof message.nx !== "number" || typeof message.ny !== "number") return;
+
+        const cursor = ensureCursor();
+        const x = message.nx * window.innerWidth;
+        const y = message.ny * window.innerHeight;
+        cursor.style.transform = `translate(${x - 9}px, ${y - 9}px)`;
+        cursor.style.background = message.gesture === "CLICK" ? "#3b82f6" : "#ff4d4d";
+
+        const gesture = message.gesture || "IDLE";
+        const now = Date.now();
+        if (gesture === "CLICK" && previousGesture !== "CLICK" && now - lastClickAt > 500) {
+            lastClickAt = now;
+            clickAt(x, y);
+        }
+        previousGesture = gesture;
+    }
+
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+        if (message?.type === "PING") {
+            sendResponse({ ok: true });
+            return true;
+        }
+        if (message?.type === "GESTURE") onGesture(message);
+        return false;
     });
 
-    document.body.appendChild(iframe);
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === "local" && changes.cameraEnabled && !changes.cameraEnabled.newValue) {
+            removeCursor();
+        }
+    });
 }
-
-
-chrome.storage.local.get(['cameraEnabled'], (result) => {
-    if (result.cameraEnabled) {
-        updateOverlayState(true);
-    }
-});
-
-chrome.storage.onChanged.addListener((changes, namespace) => {
-    if (namespace === 'local' && changes.cameraEnabled) {
-        const newValue = changes.cameraEnabled.newValue;
-        updateOverlayState(newValue);
-    }
-});
-
-// chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-//     if (request.action === "TOGGLE_OVERLAY") {
-//         const existingIframe = document.getElementById('touchless-overlay-frame');
-//         const newState = !existingIframe;
-//
-//         updateOverlayState(newState);
-//
-//     }
-// });

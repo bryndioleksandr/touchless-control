@@ -8,8 +8,11 @@
     "default_icon": "touchless-logo.png"
   },
   "permissions": [
-    "offscreen",
-    "storage"
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"
@@ -24,12 +27,13 @@
     {
       "resources": [
         "index.html",
-        "assets/*"
+        "assets/*",
+        "wasm/*"
       ],
       "matches": ["<all_urls>"]
     }
   ],
   "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; worker-src 'self'; connect-src 'self' blob: data: https://storage.googleapis.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; object-src 'self'"
   }
 }

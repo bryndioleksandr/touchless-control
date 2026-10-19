@@ -17,23 +17,28 @@ export const mapCoordinates = (
 
 let prevX = 0;
 let prevY = 0;
+let hasPrev = false;
 
 export const lerp = (start: number, end: number, factor: number) => {
     return start + (end - start) * factor;
 };
 
-export const coordsForMovement = (landmarkDetections: NormalizedLandmark[], screenWidth: number, screenHeight: number) => {
+export const coordsForMovement = (landmarkDetections: NormalizedLandmark[]) => {
     if (!landmarkDetections || landmarkDetections.length === 0) return null;
 
     const indexTip = landmarkDetections[8];
-    const rawX = mapCoordinates(1 - indexTip.x, 0, 1, 0, screenWidth);
-    const rawY = mapCoordinates(indexTip.y, 0, 1, 0, screenHeight);
+    const rawX = mapCoordinates(1 - indexTip.x, 0, 1, 0, 1);
+    const rawY = mapCoordinates(indexTip.y, 0, 1, 0, 1);
 
-    const smoothX = lerp(prevX, rawX, 0.2);
-    const smoothY = lerp(prevY, rawY, 0.5);
+    if (!hasPrev) {
+        prevX = rawX;
+        prevY = rawY;
+        hasPrev = true;
+    } else {
+        prevX = lerp(prevX, rawX, 0.4);
+        prevY = lerp(prevY, rawY, 0.4);
+    }
 
-    prevX = smoothX;
-    prevY = smoothY;
-    return {x: smoothX, y: smoothY};
+    return {nx: prevX, ny: prevY};
 }
 

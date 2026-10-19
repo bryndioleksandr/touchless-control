@@ -1,25 +1,41 @@
 import {FilesetResolver, HandLandmarker, type HandLandmarkerResult } from "@mediapipe/tasks-vision";
 import { HAND_CONNECTIONS } from "@mediapipe/hands";
 import React from "react";
-import {recognizeGesture} from "./gestures/gestureRecognizer.ts";
 
+const MODEL_PATH = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+
+const wasmBase = () => {
+    if (typeof chrome !== "undefined" && chrome.runtime?.id) {
+        return chrome.runtime.getURL("wasm");
+    }
+    return "./wasm";
+};
 
 export const initHandDetector = async (setIsHandModelLoaded: React.Dispatch<React.SetStateAction<boolean>>) => {
     try {
-        console.log('trying to init hands');
-        const vision = await FilesetResolver.forVisionTasks("./wasm");
-        const handDetector = await HandLandmarker.createFromOptions(vision, {
+        const vision = await FilesetResolver.forVisionTasks(wasmBase());
+        const create = (delegate: "GPU" | "CPU") => HandLandmarker.createFromOptions(vision, {
             baseOptions: {
-                modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-                delegate: "GPU"
+                modelAssetPath: MODEL_PATH,
+                delegate,
             },
             numHands: 2,
-            runningMode: "VIDEO"
+            runningMode: "VIDEO",
         });
+
+        let handDetector: HandLandmarker;
+        try {
+            handDetector = await create("GPU");
+        } catch (gpuError) {
+            console.warn("GPU hand model failed, using CPU", gpuError);
+            handDetector = await create("CPU");
+        }
+
         setIsHandModelLoaded(true);
-        if(handDetector !== undefined) return handDetector;
+        return handDetector;
     } catch (e) {
         console.error("error is:", e);
+        return null;
     }
 }
 
@@ -32,10 +48,6 @@ export const getHandLandmarks = (handDetector: HandLandmarker, videoRef: HTMLVid
 
 export const drawHandSkeleton = (landmarksDetection: HandLandmarkerResult, ctx: CanvasRenderingContext2D) => {
     if (!landmarksDetection.landmarks?.length) return;
-    console.log('landmarks:', landmarksDetection);
-    // console.log('world landmarks:', landmarksDetection.worldLandmarks);
-    const gesture = recognizeGesture(landmarksDetection);
-    if(gesture !== "IDLE") console.log('current gesture is', gesture);
     const { width, height } = ctx.canvas;
 
     ctx.save();
